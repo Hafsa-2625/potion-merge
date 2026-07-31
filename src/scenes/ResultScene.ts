@@ -282,6 +282,9 @@ export class ResultScene extends Phaser.Scene {
         color: HEX.text,
         align: 'center',
         lineSpacing: 8 * ui,
+        // Landscape phones clamp ui to its floor, leaving the card barely wider than
+        // the longest line — let it reflow rather than run under the panel edge.
+        wordWrap: { width: cardW * 0.84 },
       })
       .setOrigin(0.5);
 
