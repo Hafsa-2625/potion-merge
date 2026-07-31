@@ -1,8 +1,7 @@
 import Phaser from 'phaser';
-import { CTA_URL, GameResultData, SCENE_KEYS } from '../config/gameConfig';
-import { openCta } from '../utils/cta';
+import { GameResultData, SCENE_KEYS } from '../config/gameConfig';
 import { getTierById } from '../data/itemTiers';
-import { Layout, computeLayout } from '../utils/layout';
+import { Layout, computeLayout, fontSize } from '../utils/layout';
 import { SceneBackground } from '../ui/background';
 import { COLORS, FONT_UI, HEX, createButton, createTitle, drawPanel } from '../ui/theme';
 import { attachResponsiveRebuild } from '../utils/sceneResize';
@@ -46,6 +45,7 @@ function metricsFor(u: number): Metrics {
 export class ResultScene extends Phaser.Scene {
   private resultData!: GameResultData;
   private layout!: Layout;
+  private comingSoonOverlay?: Phaser.GameObjects.Container;
 
   constructor() {
     super(SCENE_KEYS.RESULT);
@@ -59,6 +59,8 @@ export class ResultScene extends Phaser.Scene {
   create(): void {
     const { width, height } = this.scale.gameSize;
     this.layout = computeLayout(width, height);
+    // A resize rebuild re-runs create() on the same instance, so drop the stale handle.
+    this.comingSoonOverlay = undefined;
     new SceneBackground(this, width, height, 10);
 
     if (this.resultData.won) {
@@ -247,7 +249,71 @@ export class ResultScene extends Phaser.Scene {
       fontSize: Math.round(Math.min(m.btnFs, m.btnH * 0.4)),
       fill: isCta ? COLORS.buttonGreen : COLORS.button,
       fillDeep: isCta ? COLORS.buttonGreenDeep : COLORS.buttonDeep,
-      onClick: isCta ? () => openCta(CTA_URL) : () => this.scene.start(SCENE_KEYS.GAME),
+      onClick: isCta ? () => this.showComingSoon() : () => this.scene.start(SCENE_KEYS.GAME),
+    });
+  }
+
+  /** Placeholder for the store CTA until the game actually ships. */
+  private showComingSoon(): void {
+    if (this.comingSoonOverlay) return;
+
+    const { width, height, cx, cy, ui, pad } = this.layout;
+    const overlay = this.add.container(0, 0).setDepth(1000).setAlpha(0);
+
+    const dimmer = this.add.rectangle(cx, cy, width, height, 0x0d0620, 0.78).setInteractive();
+
+    const cardW = Math.min(width - pad * 2, 520 * ui);
+    const cardH = Math.min(height - pad * 2, 320 * ui);
+    const card = drawPanel(this, cx, cy, cardW, cardH, { radius: 34 * ui, gloss: false });
+
+    const title = this.add
+      .text(cx, cy - cardH * 0.26, 'COMING SOON', {
+        fontFamily: FONT_UI,
+        fontSize: fontSize(38, ui),
+        color: HEX.gold,
+        fontStyle: 'bold',
+      })
+      .setOrigin(0.5);
+
+    const body = this.add
+      .text(cx, cy, 'Potion Merge is still brewing.\nThe full game lands on the stores soon.', {
+        fontFamily: FONT_UI,
+        fontSize: fontSize(22, ui),
+        color: HEX.text,
+        align: 'center',
+        lineSpacing: 8 * ui,
+      })
+      .setOrigin(0.5);
+
+    const buttonH = Math.min(72 * ui, cardH * 0.22);
+    const okButton = createButton(this, {
+      x: cx,
+      y: cy + cardH * 0.31,
+      width: Math.min(cardW * 0.5, 240 * ui),
+      height: buttonH,
+      label: 'GOT IT',
+      fontSize: Math.round(Math.min(28 * ui, buttonH * 0.42)),
+      onClick: () => this.hideComingSoon(),
+    });
+
+    overlay.add([dimmer, card, title, body, okButton]);
+    dimmer.on('pointerdown', () => this.hideComingSoon());
+
+    this.comingSoonOverlay = overlay;
+    this.tweens.add({ targets: overlay, alpha: 1, duration: 180, ease: 'Cubic.easeOut' });
+  }
+
+  private hideComingSoon(): void {
+    const overlay = this.comingSoonOverlay;
+    if (!overlay) return;
+
+    this.comingSoonOverlay = undefined;
+    this.tweens.add({
+      targets: overlay,
+      alpha: 0,
+      duration: 150,
+      ease: 'Cubic.easeIn',
+      onComplete: () => overlay.destroy(true),
     });
   }
 
