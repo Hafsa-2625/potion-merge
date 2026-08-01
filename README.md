@@ -4,6 +4,15 @@ A single-player 2D merge game built with **Phaser 3** and **TypeScript**, packag
 
 Drag identical potions together to brew higher tiers. Create a **Legendary Potion** before your 30 moves run out.
 
+## Deliverables
+
+| Deliverable | Where |
+| --- | --- |
+| Playable HTML build | `dist/index.html` — one self-contained file, ~1.5 MB, no network requests |
+| Source | this repository |
+
+Produce the build with `npm run build`, then open `dist/index.html` by double-clicking it — it needs no web server, no install step and no internet connection. `dist/` is listed in `.gitignore`, so build locally if the file is not present in your copy.
+
 ## Game Concept
 
 Merge matching items on a 4x5 grid to climb six tiers:
@@ -126,8 +135,19 @@ src/
 ## AppLovin / MRAID Notes
 
 - The build is a single HTML file with no external asset requests.
-- The CTA calls `mraid.open(url)` when MRAID is present and falls back to `window.open` for local testing (see `src/utils/cta.ts`); set the destination via `CTA_URL` in `src/config/gameConfig.ts`.
+- **CTA:** the **INSTALL NOW** button on the result screen opens an in-game **Coming Soon** overlay, because this build has no live store listing to point at. To ship it as a real playable, call `openCta(CTA_URL)` from `ResultScene.showComingSoon()`'s call site instead — `src/utils/cta.ts` already prefers `mraid.open(url)` when MRAID is present and falls back to `window.open`, and the destination is set by `CTA_URL` in `src/config/gameConfig.ts`.
 - No audio is bundled, so there is no autoplay-policy interaction to manage.
+
+## Assets & Licensing
+
+Every asset in this project is original or permissively licensed:
+
+- **Artwork** — all textures are hand-authored SVG in `scripts/generateAssets.mjs`, written for this project and compiled to base64. No third-party image files, sprite packs or downloaded art are used.
+- **Fonts** — system font stacks only (Trebuchet MS / Verdana and Georgia / Palatino, with generic fallbacks). Nothing is bundled or fetched.
+- **Audio** — none.
+- **Third-party code** — Phaser 3 (MIT), Vite, TypeScript, `vite-plugin-singlefile` and Puppeteer (all MIT), used per `package.json`.
+
+This project is released under the MIT license.
 
 ## Tuning
 
@@ -152,12 +172,14 @@ The spawn mix seeds some tier-1 and tier-2 items because a pure tier-0 economy c
 - **Single game mode** with no persistence or level progression, in order to polish one loop.
 - **Fluid layout** driven by the real canvas size instead of a scaled fixed resolution, with a separate landscape arrangement. This costs a layout pass per scene but avoids letterboxing and cramped desktop views.
 - **Debounced scene rebuild** on resize for the menu and result screens, since they hold no state; only the game scene relayouts in place.
+- **Placeholder CTA.** With no real store listing behind this build, the install button shows a *Coming Soon* overlay rather than sending players to a dead URL. The MRAID-aware `openCta()` path is kept in the codebase so wiring a live store link is a one-line change.
 
 ## Future Improvements
 
 - Power-ups: shuffle, tier boost, extra moves
 - Level progression with varied objectives
 - Sound effects and music, gated behind the first user interaction
+- A live store CTA through `mraid.open()` in place of the Coming Soon overlay
 - Analytics hooks for playable-ad funnels
 - Undo and hint systems for accessibility
 
